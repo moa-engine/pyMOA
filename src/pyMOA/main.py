@@ -2,7 +2,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pyMOA.core.engine_loader import EngineLoader
 
 
-def search(query, engines=None, page=1, safesearch=0, time_range=None):
+def search(q, lang, country, engine=None, page=1, safesearch=0, time_range=None, size=None):
     """
     Multi-engine search interface as a Python function.
 
@@ -29,7 +29,7 @@ def search(query, engines=None, page=1, safesearch=0, time_range=None):
     # Loading engines and determining healthy engines
     loader = EngineLoader()
     engine_status = loader.list_engines()
-    selected_engines = engines if engines is not None else engine_status["active"]
+    selected_engines = engine if engine is not None else engine_status["active"]
 
     results = {}
     # Adding active or inactive motors to the results
@@ -44,11 +44,14 @@ def search(query, engines=None, page=1, safesearch=0, time_range=None):
                 continue
             # Creating search parameters
             search_params = {
-                "query": query,
+                "query": q,
                 "page": page,
                 "safesearch": safesearch,
                 "time_range": time_range,
-    #               "num_results": num_results, # Unfinished
+                "locale": lang,
+                "country": country,
+                "num_results": size, # For engines that can return a certain number of results by default
+#                "category": category
             }
 
             futures[executor.submit(engine.search, **search_params)] = engine_name
@@ -56,7 +59,11 @@ def search(query, engines=None, page=1, safesearch=0, time_range=None):
         for future in futures:
             engine_name = futures[future]
             try:
-                results[engine_name] = future.result()
+                data = future.result()
+                if size and isinstance(data, dict) and "results" in data and isinstance(data["results"], list):
+                    data["results"] = data["results"][:size]
+
+                results[engine_name] = data
             except Exception as e:
                 results[engine_name] = {"error": str(e)}
                 results[engine_name] = {"error": str(e)}
