@@ -1,6 +1,6 @@
 
 
-def get_proxy_config(enabled=True):
+def get_proxy_config(enabled=False):
 
     """
     Global proxy settings for engines that use the "requests" library.
