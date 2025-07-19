@@ -43,7 +43,24 @@ def search(
     loader = EngineLoader()
     engine_status = loader.list_engines()
     plugin_status = ploader.list_plugins()
-    selected_engines = engine if engine is not None else engine_status["active"]
+
+    category = category.lower() if category else "general"
+    if category not in engine_status:
+        category = "general"
+
+    if engine:
+        if category in engine_status:
+            invalid_engines = [e for e in engine if e not in engine_status[category]]
+            if invalid_engines:
+                return {
+                    "error": f"Engine(s) {invalid_engines} not found in category '{category}'"
+                }
+
+        selected_engines = engine
+    else:
+        selected_engines = engine_status[category]
+
+
     selected_pre_plugins = []
     selected_post_plugins = []
 
@@ -94,7 +111,7 @@ def search(
                 "locale": lang,
                 "country": country,
                 "num_results": size, # For engines that can return a certain number of results by default
-#                "category": category
+                "country": country
             }
 
             futures[executor.submit(engine.search, **search_params)] = ("engine", engine_name)
