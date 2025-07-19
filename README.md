@@ -21,6 +21,13 @@ The project is currently in alpha development, so there is no pre-built package.
   Use, modify, and distribute freely under GPL‑3.0 terms.
 
 
+## Install from pypi
+
+```bash
+pip install moa-engine
+```
+**⚠️ The package name is different in pypi. They will be the same in the next version. Use the name moa-engine in the following examples.**
+
 ### 🛠️ Build & Install from Source
 
 1. Clone the repository:
