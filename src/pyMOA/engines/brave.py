@@ -3,10 +3,6 @@ from lxml import html
 import requests
 from pyMOA.core.base_engine import BaseEngine
 from dateutil import parser
-from pyMOA.proxy_utils import get_proxy_config
-
-# Get proxy settings
-proxies = get_proxy_config()
 
 class BraveEngine(BaseEngine):
     def __init__(self):
@@ -104,6 +100,7 @@ class BraveEngine(BaseEngine):
                 category: str = 'search', time_range: str = None,
                 safesearch: int = 0, locale: str = 'en-US',
                 country: str = 'US',
+                proxy = ""
                 **kwargs) -> dict:
         
         try:
@@ -133,7 +130,7 @@ class BraveEngine(BaseEngine):
                 headers=config['headers'],
                 cookies=config['cookies'],
                 timeout=timeout,
-                proxies=proxies
+                proxies=proxy
             )
             response.raise_for_status()
             

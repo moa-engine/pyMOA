@@ -1,7 +1,33 @@
 from concurrent.futures import ThreadPoolExecutor
 from pyMOA.core.engine_loader import EngineLoader
 from pyMOA.core.plugin_loader import PluginLoader
-from typing import Optional, Annotated
+from typing import Optional, Annotated , Union
+
+def get_proxy_config(proxy: str | dict =None):
+
+    """
+    Global proxy settings for engines that use the "requests" library.
+    Supported proxy types: Follows the "requests" supported ones. Current inputs are passed directly to requests.get proxies input. For more information, see https://requests.readthedocs.io.
+    """
+    if proxy is None:
+        return None
+
+
+    if isinstance(proxy, str):
+        if proxy[:5] == "http:":
+            return proxy
+        elif proxy[:5] == "https":
+            proxy = proxy.replace("https://", "http://", 1)
+            return proxy
+        else:
+            raise TypeError("Proxy string must start with 'http://' or 'https://'.")
+
+    elif isinstance(proxy, dict):
+        if not set(proxy.keys()) & {"http", "https"}:
+            raise TypeError("The input dictionary must contain at least one of the two proxy types http or https.")
+
+        return proxy
+
 
 def search(
     q: Annotated[Optional[str], "Search query"] = None,
@@ -14,6 +40,8 @@ def search(
     safesearch: Annotated[int, "Safe search level"] = 0,
     country: Annotated[str, "Country to search"] = "",
     category: Annotated[str, "Search category"] = "general",
+    proxy: Annotated[Union[str, dict[str, str]], "HTTP or HTTPS proxy string or dict"] = None,
+#    api_mod: Annotated[str, "API behavior. stream or normal"] = "normal"
     ):
     """
     Multi-engine search interface as a Python function.
@@ -52,9 +80,7 @@ def search(
         if category in engine_status:
             invalid_engines = [e for e in engine if e not in engine_status[category]]
             if invalid_engines:
-                return {
-                    "error": f"Engine(s) {invalid_engines} not found in category '{category}'"
-                }
+                raise ValueError(f"Engine(s) {invalid_engines} not found in category '{category}'")
 
         selected_engines = engine
     else:
@@ -68,7 +94,7 @@ def search(
         for plugin_name in plugin:
             plugin_instance = ploader.get_plugin(plugin_name)
             if not plugin_instance:
-                return "Plugin '%s' not found or failed to load.", plugin_name
+                raise ValueError(f"Plugin '{plugin_name}' not found or failed to load.")
 
             plugin_type = plugin_instance.get_type().lower()
             if plugin_type == "pre":
@@ -76,16 +102,15 @@ def search(
             elif plugin_type == "post":
                 selected_post_plugins.append(plugin_instance)
             else:
-                return f"Plugin '{plugin_name}' has unknown type '{plugin_type}'"
+                raise ValueError(f"Plugin '{plugin_name}' has unknown type '{plugin_type}'")
+
 
     else:
         selected_pre_plugins = ploader.pre_plugins
         selected_post_plugins = ploader.post_plugins
 
 
-
-
-
+    proxy = get_proxy_config(proxy)
 
     results = {}
     pre_plugin_outputs = {}
@@ -109,9 +134,9 @@ def search(
                 "safesearch": safesearch,
                 "time_range": time_range,
                 "locale": lang,
-                "country": country,
                 "num_results": size, # For engines that can return a certain number of results by default
-                "country": country
+                "country": country,
+                "proxy": proxy
             }
 
             futures[executor.submit(engine.search, **search_params)] = ("engine", engine_name)
