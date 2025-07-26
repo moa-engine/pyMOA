@@ -31,17 +31,16 @@ def get_proxy_config(proxy: str | dict =None):
 
 def search(
     q: Annotated[Optional[str], "Search query"] = None,
-    engine: Annotated[Optional[list[str]], "List of search engines"] = None,
-    plugin: Annotated[Optional[list[str]], "List of plugins"] = None,
+    engines: Annotated[Optional[list[str]], "List of search engines"] = None,
+    enabled_plugins: Annotated[Optional[list[str]], "List of plugins"] = None,
     time_range: Annotated[str, "Time range filter"] = None,
-    lang: Annotated[str, "Search language"] = "",
-    size: Annotated[Optional[int], "Number of results per engine"] = None,
-    page: Annotated[int, "Page number"] = 1,
+    language: Annotated[str, "Search language"] = "",
+    limit: Annotated[Optional[int], "Number of results per engine"] = None,
+    pageno: Annotated[int, "Page number"] = 1,
     safesearch: Annotated[int, "Safe search level"] = 0,
     country: Annotated[str, "Country to search"] = "",
-    category: Annotated[str, "Search category"] = "general",
+    categories: Annotated[str, "Search category"] = "general",
     proxy: Annotated[Union[str, dict[str, str]], "HTTP or HTTPS proxy string or dict"] = None,
-#    api_mod: Annotated[str, "API behavior. stream or normal"] = "normal"
     ):
     """
     Multi-engine search interface as a Python function.
@@ -72,26 +71,26 @@ def search(
     engine_status = loader.list_engines()
     plugin_status = ploader.list_plugins()
 
-    category = category.lower() if category else "general"
-    if category not in engine_status:
-        category = "general"
+    categories = category.lower() if categories else "general"
+    if categories not in engine_status:
+        categories = "general"
 
-    if engine:
-        if category in engine_status:
-            invalid_engines = [e for e in engine if e not in engine_status[category]]
+    if engines:
+        if categories in engine_status:
+            invalid_engines = [e for e in engines if e not in engine_status[categories]]
             if invalid_engines:
-                raise ValueError(f"Engine(s) {invalid_engines} not found in category '{category}'")
+                raise ValueError(f"Engine(s) {invalid_engines} not found in category '{categories}'")
 
-        selected_engines = engine
+        selected_engines = engines
     else:
-        selected_engines = engine_status[category]
+        selected_engines = engine_status[categories]
 
 
     selected_pre_plugins = []
     selected_post_plugins = []
 
-    if plugin:
-        for plugin_name in plugin:
+    if enabled_plugins:
+        for plugin_name in enabled_plugins:
             plugin_instance = ploader.get_plugin(plugin_name)
             if not plugin_instance:
                 raise ValueError(f"Plugin '{plugin_name}' not found or failed to load.")
@@ -130,11 +129,11 @@ def search(
             # Creating search parameters
             search_params = {
                 "query": q,
-                "page": page,
+                "page": pageno,
                 "safesearch": safesearch,
                 "time_range": time_range,
-                "locale": lang,
-                "num_results": size, # For engines that can return a certain number of results by default
+                "locale": language,
+                "num_results": limit, # For engines that can return a certain number of results by default
                 "country": country,
                 "proxy": proxy
             }
@@ -151,8 +150,8 @@ def search(
             try:
                 output = future.result()
                 if ftype == "engine":
-                    if size and isinstance(output, dict) and "results" in output and isinstance(output["results"], list):
-                        output["results"] = output["results"][:size]
+                    if limit and isinstance(output, dict) and "results" in output and isinstance(output["results"], list):
+                        output["results"] = output["results"][:limit]
                     results[name] = output
                 elif ftype == "pre_plugin":
                     pre_plugin_outputs[name] = output
